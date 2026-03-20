@@ -22,8 +22,13 @@ class NumericProcessor(DataProcessor):
         return isinstance(data, list) and all(isinstance(x, (int, float)) for x in data)
 
     def process(self, data: Any) -> str:
+        print("Processing data:", data)
+
         if not self.validate(data):
+            print("Validation: Invalid numeric data")
             raise ValueError("Invalid numeric data")
+
+        print("Validation: Numeric data verified")
 
         total = sum(data)
         avg = total / len(data)
@@ -38,8 +43,13 @@ class TextProcessor(DataProcessor):
         return isinstance(data, str)
 
     def process(self, data: Any) -> str:
+        print(f'Processing data: "{data}"')
+
         if not self.validate(data):
+            print("Validation: Invalid text data")
             raise ValueError("Invalid text data")
+
+        print("Validation: Text data verified")
 
         char_count = len(data)
         word_count = len(data.split())
@@ -54,20 +64,25 @@ class LogProcessor(DataProcessor):
         return isinstance(data, str)
 
     def process(self, data: Any) -> str:
+        print(f'Processing data: "{data}"')
+
         if not self.validate(data):
+            print("Validation: Invalid log entry")
             raise ValueError("Invalid log entry")
+
+        print("Validation: Log entry verified")
 
         if "ERROR" in data:
             level = "ALERT"
             message = data.split("ERROR:")[-1].strip()
+            result = f"[{level}] ERROR level detected: {message}"
         elif "INFO" in data:
             level = "INFO"
             message = data.split("INFO:")[-1].strip()
+            result = f"[{level}] INFO level detected: {message}"
         else:
-            level = "LOG"
-            message = data
+            result = f"[LOG] {data}"
 
-        result = f"[{level}] {message}"
         return self.format_output(result)
 
 
@@ -75,15 +90,24 @@ if __name__ == "__main__":
 
     print("=== CODE NEXUS - DATA PROCESSOR FOUNDATION ===\n")
 
+    print("Initializing Numeric Processor...")
     numeric = NumericProcessor()
-    text = TextProcessor()
-    log = LogProcessor()
-
     print(numeric.process([1, 2, 3, 4, 5]))
-    print(text.process("Hello Nexus World"))
-    print(log.process("ERROR: Connection timeout"))
+    print()
 
-    print("\n=== Polymorphic Processing Demo ===")
+    print("Initializing Text Processor...")
+    text = TextProcessor()
+    print(text.process("Hello Nexus World"))
+    print()
+
+    print("Initializing Log Processor...")
+    log = LogProcessor()
+    print(log.process("ERROR: Connection timeout"))
+    print()
+
+    print("=== Polymorphic Processing Demo ===\n")
+
+    print("Processing multiple data types through same interface...")
 
     processors: List[DataProcessor] = [
         NumericProcessor(),
@@ -97,5 +121,6 @@ if __name__ == "__main__":
         "INFO: System ready"
     ]
 
-    for processor, data in zip(processors, data_samples):
-        print(processor.process(data))
+    for i, (processor, data) in enumerate(zip(processors, data_samples), start=1):
+        result = processor.process(data)
+        print(f"Result {i}: {result.replace('Output: ', '')}")
