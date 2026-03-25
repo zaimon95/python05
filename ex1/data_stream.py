@@ -75,7 +75,10 @@ class SensorStream(DataStream):
     ) -> List[Any]:
         """Filter: keep only items flagged as 'alert' when criteria='alert'."""
         if criteria == "alert":
-            return [item for item in data_batch if "alert" in str(item).lower()]
+            return [
+                item for item in data_batch
+                if "alert" in str(item).lower()
+            ]
         return super().filter_data(data_batch, criteria)
 
     def get_stats(self) -> Dict[str, Union[str, int, float]]:
@@ -247,7 +250,10 @@ def main() -> None:
 
     trans: TransactionStream = TransactionStream("TRANS_001")
     print("Initializing Transaction Stream...")
-    print(f"Stream ID: {trans.stream_id}, Type: {TransactionStream.STREAM_TYPE}")
+    print(
+        f"Stream ID: {trans.stream_id}, "
+        f"Type: {TransactionStream.STREAM_TYPE}"
+    )
     trans_batch: List[Any] = ["buy:100", "sell:150", "buy:75"]
     print(f"Processing transaction batch: {trans_batch}")
     print(trans.process_batch(trans_batch))
@@ -255,7 +261,10 @@ def main() -> None:
 
     event: EventStream = EventStream("EVENT_001")
     print("Initializing Event Stream...")
-    print(f"Stream ID: {event.stream_id}, Type: {EventStream.STREAM_TYPE}")
+    print(
+        f"Stream ID: {event.stream_id}, "
+        f"Type: {EventStream.STREAM_TYPE}"
+    )
     event_batch: List[Any] = ["login", "error", "logout"]
     print(f"Processing event batch: {event_batch}")
     print(event.process_batch(event_batch))
@@ -290,7 +299,10 @@ def main() -> None:
 
     print("Stream filtering active: High-priority data only")
     filter_batches: List[List[Any]] = [
-        ["temp:25.0", "alert:critical_heat", "temp:18.0", "alert:pressure_drop"],
+        [
+            "temp:25.0", "alert:critical_heat",
+            "temp:18.0", "alert:pressure_drop",
+        ],
         ["buy:50", "sell:200", "buy:150"],
         ["login", "error", "logout"],
     ]

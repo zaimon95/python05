@@ -2,7 +2,9 @@ import json
 import time
 from abc import ABC, abstractmethod
 from collections import defaultdict
-from typing import Any, Dict, List, Optional, Protocol, Union, runtime_checkable
+from typing import (
+    Any, Dict, List, Optional, Protocol, Union, runtime_checkable
+)
 
 
 # ---------------------------------------------------------------------------
@@ -41,7 +43,10 @@ class TransformStage:
     def process(self, data: Any) -> Dict[str, Any]:
         """Add metadata and mark data as transformed."""
         if not isinstance(data, dict):
-            return {"error": "Expected dict from InputStage", "stage": "transform"}
+            return {
+                "error": "Expected dict from InputStage",
+                "stage": "transform",
+            }
         result: Dict[str, Any] = dict(data)
         result["stage"] = "transform"
         result["enriched"] = True
@@ -57,7 +62,7 @@ class TransformStage:
 
 
 class OutputStage:
-    """Stage 3 – serialise the transformed envelope to a human-readable string."""
+    """Stage 3 – serialise the transformed envelope to a string."""
 
     def process(self, data: Any) -> str:
         """Convert the processed dict to a formatted output string."""
@@ -97,7 +102,9 @@ class ProcessingPipeline(ABC):
     def add_stage(self, stage: ProcessingStage) -> None:
         """Append a stage to the pipeline."""
         if not isinstance(stage, ProcessingStage):
-            raise TypeError(f"{stage} does not implement ProcessingStage protocol")
+            raise TypeError(
+                f"{stage} does not implement ProcessingStage protocol"
+            )
         self.stages.append(stage)
 
     def run_stages(self, data: Any) -> Any:
@@ -174,18 +181,20 @@ class CSVAdapter(ProcessingPipeline):
                     col: idx for idx, col in enumerate(columns)
                 }
             else:
-                parsed = data  # type: ignore[assignment]
-            result: Any = self.run_stages(parsed)
+                parsed = data
+            self.run_stages(parsed)
             self._records_processed += 1
-            actions: int = max(1, len(columns) - 2) if isinstance(data, str) else 1
-            return f"User activity logged: {actions} actions processed"
+            num_actions: int = (
+                max(1, len(columns) - 2) if isinstance(data, str) else 1
+            )
+            return f"User activity logged: {num_actions} actions processed"
         except Exception as e:
             self._errors += 1
             return f"CSVAdapter error: {e}"
 
 
 class StreamAdapter(ProcessingPipeline):
-    """Pipeline adapter that handles real-time stream data (lists of readings)."""
+    """Pipeline adapter for real-time stream data (lists of readings)."""
 
     def __init__(self, pipeline_id: str) -> None:
         super().__init__(pipeline_id)
@@ -194,7 +203,7 @@ class StreamAdapter(ProcessingPipeline):
         self.add_stage(OutputStage())
 
     def process(self, data: Any) -> str:
-        """Aggregate a list of numeric readings then run through pipeline stages."""
+        """Aggregate numeric readings then run through pipeline stages."""
         try:
             if isinstance(data, list):
                 readings: List[float] = [
@@ -255,7 +264,10 @@ class NexusManager:
     ) -> str:
         """Pass data through a chain of pipelines sequentially."""
         chain: List[ProcessingPipeline] = (
-            [p for p in self._pipelines if p.pipeline_id in (pipeline_ids or [])]
+            [
+                p for p in self._pipelines
+                if p.pipeline_id in (pipeline_ids or [])
+            ]
             if pipeline_ids
             else self._pipelines
         )
@@ -349,14 +361,18 @@ def main() -> None:
     print("Data flow: Raw -> Processed -> Analyzed -> Stored")
     print()
     # Simulate chaining: process 100 "records" through 3 pipelines
-    sample: str = '{"sensor": "temp", "value": 22.0, "unit": "°C"}'
+    sample: str = '{"sensor": "temp", "value": 22.0, "unit": "C"}'
     records: int = 100
     start_time: float = time.time()
     for _ in range(records):
         json_pipe.process(sample)
     elapsed: float = time.time() - start_time
     efficiency: int = 95
-    print(f"Chain result: {records} records processed through 3-stage pipeline")
+    chain_msg: str = (
+        f"Chain result: {records} records processed "
+        f"through 3-stage pipeline"
+    )
+    print(chain_msg)
     print(
         f"Performance: {efficiency}% efficiency, "
         f"{elapsed:.1f}s total processing time"

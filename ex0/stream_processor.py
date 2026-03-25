@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Any, List, Dict, Union, Optional
+from typing import Any, List, Union, Optional
 
 
 class DataProcessor(ABC):
@@ -86,7 +86,8 @@ class LogProcessor(DataProcessor):
         # Extract message after the first colon if present
         parts: List[str] = data.split(":", 1)
         message: str = parts[1].strip() if len(parts) > 1 else data
-        alert: str = "ALERT" if detected_level in ("ERROR", "CRITICAL") else detected_level
+        is_critical: bool = detected_level in ("ERROR", "CRITICAL")
+        alert: str = "ALERT" if is_critical else detected_level
         return f"[{alert}] {detected_level} level detected: {message}"
 
     def format_output(self, result: str) -> str:
