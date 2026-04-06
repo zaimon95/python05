@@ -1,171 +1,178 @@
 from abc import ABC, abstractmethod
-from typing import Any, List, Union, Optional
+from typing import Any, Union
 
 
 class DataProcessor(ABC):
     """Abstract base class defining the common processing interface."""
 
-    @abstractmethod
-    def process(self, data: Any) -> str:
-        """Process the data and return result string."""
-        pass
+    def __init__(self) -> None:
+        self._storage: list[str] = []
+        self._total_processed: int = 0
 
     @abstractmethod
     def validate(self, data: Any) -> bool:
-        """Validate if data is appropriate for this processor."""
-        pass
+        """Check whether input data is appropriate for this processor."""
+        ...
 
-    def format_output(self, result: str) -> str:
-        """Format the output string (default implementation)."""
-        return f"Output: {result}"
+    @abstractmethod
+    def ingest(self, data: Any) -> None:
+        """Process and store input data."""
+        ...
+
+    def output(self) -> tuple[int, str]:
+        """Extract and remove the oldest stored item with its processing rank."""
+        if not self._storage:
+            raise IndexError("No data available in processor")
+        rank = self._total_processed - len(self._storage)
+        value = self._storage.pop(0)
+        return (rank, value)
+
+
+# ---------------------------------------------------------------------------
+# Specialized processors
+# ---------------------------------------------------------------------------
+
+NumericInput = Union[int, float, list[Union[int, float]]]
 
 
 class NumericProcessor(DataProcessor):
-    """Processor specialized for numeric data (lists of numbers)."""
+    """Processes int, float, and mixed lists of both."""
 
     def validate(self, data: Any) -> bool:
-        """Return True if data is a non-empty list of numbers."""
-        if not isinstance(data, list) or len(data) == 0:
-            return False
-        return all(isinstance(x, (int, float)) for x in data)
+        if isinstance(data, (int, float)) and not isinstance(data, bool):
+            return True
+        if isinstance(data, list):
+            return all(
+                isinstance(item, (int, float)) and not isinstance(item, bool)
+                for item in data
+            )
+        return False
 
-    def process(self, data: Any) -> str:
-        """Process numeric list: compute sum and average."""
+    def ingest(self, data: NumericInput) -> None:
         if not self.validate(data):
-            raise ValueError("Invalid numeric data")
-        total: Union[int, float] = sum(data)
-        avg: float = total / len(data)
-        return (
-            f"Processed {len(data)} numeric values, "
-            f"sum={total}, avg={avg}"
-        )
+            raise TypeError("Improper numeric data")
+        if isinstance(data, list):
+            for item in data:
+                self._storage.append(str(item))
+                self._total_processed += 1
+        else:
+            self._storage.append(str(data))
+            self._total_processed += 1
 
-    def format_output(self, result: str) -> str:
-        return f"Output: {result}"
+
+TextInput = Union[str, list[str]]
 
 
 class TextProcessor(DataProcessor):
-    """Processor specialized for text (string) data."""
+    """Processes str and lists of strings."""
 
     def validate(self, data: Any) -> bool:
-        """Return True if data is a non-empty string."""
-        return isinstance(data, str) and len(data) > 0
+        if isinstance(data, str):
+            return True
+        if isinstance(data, list):
+            return all(isinstance(item, str) for item in data)
+        return False
 
-    def process(self, data: Any) -> str:
-        """Process text: count characters and words."""
+    def ingest(self, data: TextInput) -> None:
         if not self.validate(data):
-            raise ValueError("Invalid text data")
-        chars: int = len(data)
-        words: int = len(data.split())
-        return f"Processed text: {chars} characters, {words} words"
+            raise TypeError("Improper text data")
+        if isinstance(data, list):
+            for item in data:
+                self._storage.append(item)
+                self._total_processed += 1
+        else:
+            self._storage.append(data)
+            self._total_processed += 1
 
-    def format_output(self, result: str) -> str:
-        return f"Output: {result}"
+
+LogEntry = dict[str, str]
+LogInput = Union[LogEntry, list[LogEntry]]
 
 
 class LogProcessor(DataProcessor):
-    """Processor specialized for log entry strings."""
-
-    LOG_LEVELS: List[str] = ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
+    """Processes dicts of string key-value pairs and lists of those."""
 
     def validate(self, data: Any) -> bool:
-        """Return True if data is a string containing a known log level."""
-        if not isinstance(data, str):
-            return False
-        return any(level in data.upper() for level in self.LOG_LEVELS)
+        def is_log_entry(item: Any) -> bool:
+            return (
+                isinstance(item, dict)
+                and all(isinstance(k, str) and isinstance(v, str)
+                        for k, v in item.items())
+            )
+        if is_log_entry(data):
+            return True
+        if isinstance(data, list):
+            return all(is_log_entry(item) for item in data)
+        return False
 
-    def process(self, data: Any) -> str:
-        """Process a log entry: detect level and extract message."""
+    def ingest(self, data: LogInput) -> None:
         if not self.validate(data):
-            raise ValueError("Invalid log entry")
-        detected_level: str = "UNKNOWN"
-        for level in self.LOG_LEVELS:
-            if level in data.upper():
-                detected_level = level
-                break
-        # Extract message after the first colon if present
-        parts: List[str] = data.split(":", 1)
-        message: str = parts[1].strip() if len(parts) > 1 else data
-        is_critical: bool = detected_level in ("ERROR", "CRITICAL")
-        alert: str = "ALERT" if is_critical else detected_level
-        return f"[{alert}] {detected_level} level detected: {message}"
-
-    def format_output(self, result: str) -> str:
-        return f"Output: {result}"
+            raise TypeError("Improper log data")
+        entries = data if isinstance(data, list) else [data]
+        for entry in entries:
+            level = entry.get("log_level", "")
+            message = entry.get("log_message", "")
+            self._storage.append(f"{level}: {message}")
+            self._total_processed += 1
 
 
-def demo_processor(
-    processor: DataProcessor,
-    label: str,
-    data: Any,
-    validation_msg: str
-) -> Optional[str]:
-    """Run a single processor demo and print results."""
-    print(f"Initializing {label}...")
-    print(f"Processing data: {repr(data)}")
-    if processor.validate(data):
-        print(f"Validation: {validation_msg}")
-        try:
-            result: str = processor.process(data)
-            print(processor.format_output(result))
-            return result
-        except ValueError as e:
-            print(f"Processing error: {e}")
-    else:
-        print("Validation: FAILED")
-    return None
-
-
-def main() -> None:
-    """Entry point: demonstrate polymorphic data processing."""
-    print("=== CODE NEXUS - DATA PROCESSOR FOUNDATION ===")
-    print()
-
-    numeric: NumericProcessor = NumericProcessor()
-    demo_processor(
-        numeric, "Numeric Processor", [1, 2, 3, 4, 5],
-        "Numeric data verified"
-    )
-    print()
-
-    text: TextProcessor = TextProcessor()
-    demo_processor(
-        text, "Text Processor", "Hello Nexus World",
-        "Text data verified"
-    )
-    print()
-
-    log: LogProcessor = LogProcessor()
-    demo_processor(
-        log, "Log Processor", "ERROR: Connection timeout",
-        "Log entry verified"
-    )
-    print()
-
-    print("=== Polymorphic Processing Demo ===")
-    print("Processing multiple data types through same interface...")
-
-    processors: List[DataProcessor] = [
-        NumericProcessor(),
-        TextProcessor(),
-        LogProcessor(),
-    ]
-    datasets: List[Any] = [
-        [1, 2, 3],
-        "Hello World",
-        "INFO: System ready",
-    ]
-
-    for idx, (proc, data) in enumerate(zip(processors, datasets), start=1):
-        try:
-            result: str = proc.process(data)
-            print(f"Result {idx}: {result}")
-        except ValueError as e:
-            print(f"Result {idx}: Error - {e}")
-
-    print()
-    print("Foundation systems online. Nexus ready for advanced streams.")
-
+# ---------------------------------------------------------------------------
+# Main — tests
+# ---------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    main()
+    print("=== Code Nexus - Data Processor ===")
+
+    # --- Numeric Processor ---
+    print("\nTesting Numeric Processor...")
+    num_proc = NumericProcessor()
+
+    print(f" Trying to validate input '42': {num_proc.validate(42)}")
+    print(f" Trying to validate input 'Hello': {num_proc.validate('Hello')}")
+
+    print(" Test invalid ingestion of string 'foo' without prior validation:")
+    try:
+        num_proc.ingest("foo")  # type: ignore[arg-type]
+    except TypeError as e:
+        print(f"  Got exception: {e}")
+
+    data_num = [1, 2, 3, 4, 5]
+    print(f" Processing data: {data_num}")
+    num_proc.ingest(data_num)
+
+    print(" Extracting 3 values...")
+    for _ in range(3):
+        rank, value = num_proc.output()
+        print(f"  Numeric value {rank}: {value}")
+
+    # --- Text Processor ---
+    print("\nTesting Text Processor...")
+    txt_proc = TextProcessor()
+
+    print(f" Trying to validate input '42': {txt_proc.validate(42)}")
+
+    data_txt = ["Hello", "Nexus", "World"]
+    print(f" Processing data: {data_txt}")
+    txt_proc.ingest(data_txt)
+
+    print(" Extracting 1 value...")
+    rank, value = txt_proc.output()
+    print(f"  Text value {rank}: {value}")
+
+    # --- Log Processor ---
+    print("\nTesting Log Processor...")
+    log_proc = LogProcessor()
+
+    print(f" Trying to validate input 'Hello': {log_proc.validate('Hello')}")
+
+    data_log = [
+        {"log_level": "NOTICE", "log_message": "Connection to server"},
+        {"log_level": "ERROR", "log_message": "Unauthorized access!!"},
+    ]
+    print(f" Processing data: {data_log}")
+    log_proc.ingest(data_log)
+
+    print(" Extracting 2 values...")
+    for _ in range(2):
+        rank, value = log_proc.output()
+        print(f"  Log entry {rank}: {value}")
