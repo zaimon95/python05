@@ -25,7 +25,7 @@ class DataProcessor(ABC):
             raise IndexError("No data available in processor")
         rank = self._total_processed - len(self._storage)
         value = self._storage.pop(0)
-        return (rank, value)
+        return rank, value
 
 
 # ---------------------------------------------------------------------------

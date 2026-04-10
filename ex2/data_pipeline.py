@@ -26,7 +26,15 @@ class DataProcessor(ABC):
             raise IndexError("No data available in processor")
         rank = self._total_processed - len(self._storage)
         value = self._storage.pop(0)
-        return (rank, value)
+        return rank, value
+
+    @property
+    def storage(self):
+        return self._storage
+
+    @property
+    def total_processed(self):
+        return self._total_processed
 
 
 # ---------------------------------------------------------------------------
@@ -187,7 +195,7 @@ class DataStream:
         for proc in self._processors:
             collected: list[tuple[int, str]] = []
             for _ in range(nb):
-                if not proc._storage:
+                if not proc.storage:
                     break
                 collected.append(proc.output())
             plugin.process_output(collected)
@@ -200,8 +208,8 @@ class DataStream:
             return
         for proc in self._processors:
             name = type(proc).__name__
-            remaining = len(proc._storage)
-            total = proc._total_processed
+            remaining = len(proc.storage)
+            total = proc.total_processed
             print(
                 f"{name}: total {total} items processed, "
                 f"remaining {remaining} on processor"

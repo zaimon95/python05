@@ -26,7 +26,15 @@ class DataProcessor(ABC):
             raise IndexError("No data available in processor")
         rank = self._total_processed - len(self._storage)
         value = self._storage.pop(0)
-        return (rank, value)
+        return rank, value
+
+    @property
+    def storage(self):
+        return self._storage
+
+    @property
+    def total_processed(self):
+        return self._total_processed
 
 
 # ---------------------------------------------------------------------------
@@ -131,9 +139,9 @@ class DataStream:
         """Register a new processor to the stream."""
         self._processors.append(proc)
 
-    def process_stream(self, stream: list[typing.Any]) -> None:
+    def process_stream(self, stream_processed: list[typing.Any]) -> None:
         """Route each element to the first compatible processor."""
-        for element in stream:
+        for element in stream_processed:
             handled = False
             for proc in self._processors:
                 if proc.validate(element):
@@ -154,8 +162,8 @@ class DataStream:
             return
         for proc in self._processors:
             name = type(proc).__name__
-            remaining = len(proc._storage)
-            total = proc._total_processed
+            remaining = len(proc.storage)
+            total = proc.total_processed
             print(
                 f"{name}: total {total} items processed, "
                 f"remaining {remaining} on processor"
