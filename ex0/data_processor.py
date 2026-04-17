@@ -20,7 +20,6 @@ class DataProcessor(ABC):
         ...
 
     def output(self) -> tuple[int, str]:
-        """Extract and remove the oldest stored item with its processing rank."""
         if not self._storage:
             raise IndexError("No data available in processor")
         rank = self._total_processed - len(self._storage)

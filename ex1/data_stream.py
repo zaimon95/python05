@@ -21,7 +21,6 @@ class DataProcessor(ABC):
         ...
 
     def output(self) -> tuple[int, str]:
-        """Extract and remove the oldest stored item with its processing rank."""
         if not self._storage:
             raise IndexError("No data available in processor")
         rank = self._total_processed - len(self._storage)
@@ -29,11 +28,11 @@ class DataProcessor(ABC):
         return rank, value
 
     @property
-    def storage(self):
+    def storage(self) -> list[str]:
         return self._storage
 
     @property
-    def total_processed(self):
+    def total_processed(self) -> int:
         return self._total_processed
 
 
@@ -189,7 +188,8 @@ if __name__ == "__main__":
         "Hello world",
         [3.14, -1, 2.71],
         [
-            {"log_level": "WARNING", "log_message": "Telnet access! Use ssh instead"},
+            {"log_level": "WARNING",
+             "log_message": "Telnet access! Use ssh instead"},
             {"log_level": "INFO", "log_message": "User wil is connected"},
         ],
         42,
@@ -210,7 +210,8 @@ if __name__ == "__main__":
     stream.process_stream(batch)
     stream.print_processors_stats()
 
-    print("\nConsume some elements from the data processors: Numeric 3, Text 2, Log 1")
+    print("\nConsume some elements"
+          "from the data processors: Numeric 3, Text 2, Log 1")
     for _ in range(3):
         num_proc.output()
     for _ in range(2):
